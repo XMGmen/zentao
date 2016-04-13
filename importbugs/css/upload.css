@@ -1,0 +1,21 @@
+@CHARSET "UTF-8";
+.uploadExcel {
+	margin-top: 10px;
+	margin-left:auto;
+	margin-right:auto;
+	text-align: center;
+	height: 100%;
+}
+
+#excelfile
+{
+	margin-left: 250px;
+	height: 30px;
+	margin-bottom: 10px;
+}
+
+#savebtn
+{
+	margin-bottom: 20px;
+	text-align: center;
+}

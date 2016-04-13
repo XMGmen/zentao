@@ -1,0 +1,1 @@
+function byPro(planID){    location.href = createLink('pro', 'bug', "pro=" + planID);}

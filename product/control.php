@@ -1,0 +1,763 @@
+<?php
+/**
+ * The control file of product module of ZenTaoPMS.
+ *
+ * @copyright   Copyright 2009-2015 青岛易软天创网络科技有限公司(QingDao Nature Easy Soft Network Technology Co,LTD, www.cnezsoft.com)
+ * @license     ZPL (http://zpl.pub/page/zplv11.html)
+ * @author      Chunsheng Wang <chunsheng@cnezsoft.com>
+ * @package     product
+ * @version     $Id: control.php 5144 2013-07-15 06:37:03Z chencongzhi520@gmail.com $
+ * @link        http://www.zentao.net
+ */
+class product extends control
+{
+    public $products = array();
+
+    /**
+     * Construct function.
+     * 
+     * @access public
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+
+        /* Load need modules. */
+        $this->loadModel('story');
+        $this->loadModel('release');
+        $this->loadModel('tree');
+        $this->loadModel('user');
+
+        /* Get all products, if no, goto the create page. */
+        $this->products = $this->product->getPairs('nocode');
+        if(empty($this->products) and strpos('create', $this->methodName) === false and $this->app->getViewType() != 'mhtml') $this->locate($this->createLink('product', 'create'));
+        $this->view->products = $this->products;
+    }
+
+    /**
+     * Index page, to browse.
+     *
+     * @param  string $locate     locate to browse page or not. If not, display all products.
+     * @param  int    $productID 
+     * @param  string $orderBy 
+     * @param  int    $recTotal 
+     * @param  int    $recPerPage 
+     * @param  int    $pageID 
+     * @access public
+     * @return void
+     */
+    public function index($locate = 'yes', $productID = 0, $orderBy = 'order_desc', $recTotal = 0, $recPerPage = 10, $pageID = 1)
+    {
+        // if($locate == 'yes') $this->locate($this->createLink($this->moduleName, 'browse'));
+        
+        //$this->session->set('productList', $this->app->getURI(true));
+        //if($this->app->getViewType() != 'mhtml') $this->product->setMenu($this->products, $productID);
+
+        /* Load pager and get tasks. */
+        $this->app->loadClass('pager', $static = true);
+        $pager = new pager($recTotal, $recPerPage, $pageID);
+
+        $this->app->loadLang('my');
+        $this->view->title        = $this->lang->product->allProduct;
+        $this->view->position[]   = $this->lang->product->allProduct;
+        $this->view->productStats = $this->product->getStats($orderBy, $pager);
+        $this->view->productID    = $productID;
+        $this->view->pager        = $pager;
+        $this->view->recTotal     = $pager->recTotal;
+        $this->view->recPerPage   = $pager->recPerPage;
+        $this->view->orderBy      = $orderBy;
+        $this->view->userAccount  = $this->app->user->account;
+        $this->display();
+    }
+
+    /**
+     * project 
+     * 
+     * @param  string $status 
+     * @param  int    $productID 
+     * @access public
+     * @return void
+     */
+    public function project($status = 'all', $projectID = 0, $orderBy = 'order_desc', $productID = 0, $recTotal = 0, $recPerPage = 10, $pageID = 1) 
+    { 
+        $this->product->setMenu($this->products, $productID); 
+ 
+        /* Load pager and get tasks. */ 
+        $this->app->loadClass('pager', $static = true);       
+        $pager = new pager($recTotal, $recPerPage, $pageID); 
+         
+        $this->app->loadLang('my'); 
+        // changedbyheng
+        if ($productID == 0)
+        {
+            $this->view->title = $this->lang->product->allProduct;
+        }
+        else
+        {
+            $this->view->title = $this->products[$productID].":".$this->lang->product->allProjects;
+        }
+        
+
+        // echo "$this->lang->project->allProject";
+
+        // changedbyheng
+        $this->view->products      = array(0 => $this->lang->product->select) + $this->loadModel('product')->getPairs();
+        $this->view->position[] = html::select('product', $this->view->products, $productID, "class='' onchange='byProduct(this.value, $productID)'") ;
+        $this->view->position[] = html::a(helper::createLink($this->moduleName, "index", "locate=no&productID="), "查看所有产品");
+
+        // $this->view->position[] = "";
+        $this->view->projectStats  = $this->loadModel('project')->getProjectStats('all', $productID, 30, $orderBy, $pager); 
+        
+        $this->view->productID     = $productID; 
+        $this->view->projectID     = $projectID; 
+        $this->view->pager         = $pager; 
+        $this->view->recTotal      = $pager->recTotal; 
+        $this->view->recPerPage    = $pager->recPerPage; 
+        $this->view->orderBy       = $orderBy; 
+        $this->view->status        = $status;
+        $this->display(); 
+    }
+    // changedbyheng //
+
+
+    /**
+     * Browse plans.
+     * 
+     * @param  int    $product 
+     * @param  string $orderBy 
+     * @param  int    $recTotal 
+     * @param  int    $recPerPage
+     * @param  int    $pageID
+     * @access public
+     * @return void
+     */
+    public function productplan($productID = 0, $orderBy = 'begin_desc', $recTotal = 0, $recPerPage = 20, $pageID = 1 )
+    {
+        /* Load pager. */
+        $this->app->loadClass('pager', $static = true);
+        $pager = new pager($recTotal, $recPerPage, $pageID);
+
+        /* Append id for secend sort. */
+        $sort = $this->loadModel('common')->appendOrder($orderBy);
+
+        $this->session->set('productPlanList', $this->app->getURI(true)); // ????
+        // $this->commonAction($productID);
+
+        $products               = array(0 => $this->lang->product->select) + $this->product->getPairs();
+        $this->view->position[] = $products[$productID];
+        // $this->view->position[] = html::select('product', $products, $productID, "class='' onchange='byProductplan(this.value, $productID)'");
+        if ($productID == 0)
+        {
+            $this->view->title      = $this->lang->product->productPlan;
+        }        
+        else
+        {
+            $this->view->title      = $products[$productID].$this->lang->product->productPlan;
+        }
+        // $this->view->position[]    = html::a(helper::createLink($this->moduleName, "index", "locate=no"), "查看所有产品");
+        $this->view->productID     = $productID;
+        $this->view->orderBy       = $orderBy;
+        $this->view->plans         = $this->loadModel('productplan')->getList($productID, $pager, $sort);
+        $this->view->pager         = $pager;
+        $this->view->productplanID = $productID;
+        $this->view->products      = $products;
+        $this->display();
+    }
+
+
+    /**
+     * View productplans.
+     * 
+     * @param  int    $planID 
+     * @param  string $type 
+     * @param  string $orderBy 
+     * @access public
+     * @return void
+     */
+    public function viewproductplan($planID = 0, $type = 'story', $orderBy = 'id_desc', $link = 'false', $param = '')
+    {
+
+        if($type == 'story')$this->session->set('storyList', $this->app->getURI(true));
+        if($type == 'bug')  $this->session->set('bugList', $this->app->getURI(true));
+
+        /* Append id for secend sort. */
+        $sort = $this->loadModel('common')->appendOrder($orderBy);
+
+        $plan = $this->loadModel('productplan')->getByID($planID, true);
+        if(!$plan) die(js::error($this->lang->notFound) . js::locate('back'));
+        // $this->commonAction($plan->product);
+        $products                = $this->product->getPairs();
+        $this->view->title       = "PLAN #$plan->id $plan->title/" . $products[$plan->product];
+        $this->view->position[]  = html::a(helper::createLink($this->moduleName, "productplan", "productID=$plan->product"), $products[$plan->product]);
+        $this->view->plans       = $this->loadModel('productplan')->getPairs($plan->product);
+        // echo count($this->view->plans);
+        // $this->view->plans       = array_slice($this->view->plans, 1);
+        // echo count($this->view->plans);
+        $this->view->position[]  = html::select('productplan', $this->view->plans, $planID, "class='' onchange='byPlan(this.value, $plan->product)'");
+        // $this->view->position[]  = $this->lang->productplan->view;
+
+
+        $this->view->planStories = $this->loadModel('story')->getPlanStories($planID, 'all', $type == 'story' ? $sort : 'id_desc');
+        $this->view->planBugs    = $this->loadModel('bug')->getPlanBugs($planID, 'all', $type == 'bug' ? $sort : 'id_desc');
+        $this->view->products    = $products;
+        $this->view->summary     = $this->product->summary($this->view->planStories);
+        $this->view->plan        = $plan;
+        $this->view->actions     = $this->loadModel('action')->getList('productplan', $planID);
+        $this->view->users       = $this->loadModel('user')->getPairs('noletter');
+        $this->view->type        = $type;
+        $this->view->orderBy     = $orderBy;
+        $this->view->link        = $link;
+        $this->view->param       = $param;
+        
+        $this->display();
+    }
+
+    /**
+     * Browse a product.
+     * 
+     * @param  int    $productID 
+     * @param  string $browseType 
+     * @param  int    $param 
+     * @param  string $orderBy 
+     * @param  int    $recTotal 
+     * @param  int    $recPerPage 
+     * @param  int    $pageID 
+     * @access public
+     * @return void
+     */
+    public function browse($productID = 0, $browseType = 'unclosed', $param = 0, $orderBy = '', $recTotal = 0, $recPerPage = 20, $pageID = 1)
+    {
+        /* Lower browse type. */
+        $browseType = strtolower($browseType);
+
+        /* Save session. */
+        $this->session->set('storyList',   $this->app->getURI(true));
+        $this->session->set('productList', $this->app->getURI(true));
+
+        /* Set product, module and query. */
+        $productID = $this->product->saveState($productID, $this->products);
+        $moduleID  = ($browseType == 'bymodule') ? (int)$param : 0;
+        $queryID   = ($browseType == 'bysearch') ? (int)$param : 0;
+
+        /* Set menu. */
+        $this->product->setMenu($this->products, $productID);
+
+        /* Process the order by field. */
+        if(!$orderBy) $orderBy = $this->cookie->productStoryOrder ? $this->cookie->productStoryOrder : 'id_desc';
+        setcookie('productStoryOrder', $orderBy, $this->config->cookieLife, $this->config->webRoot);
+
+        /* Append id for secend sort. */
+        $sort = $this->loadModel('common')->appendOrder($orderBy);
+
+        /* Set header and position. */
+        $this->view->title      = $this->products[$productID]. $this->lang->colon . $this->lang->product->browse;
+        $this->view->position[] = $this->products[$productID];
+        $this->view->position[] = $this->lang->product->browse;
+
+        /* Load pager. */
+        $this->app->loadClass('pager', $static = true);
+        if($this->app->getViewType() == 'mhtml') $recPerPage = 10;
+        $pager = new pager($recTotal, $recPerPage, $pageID);
+
+        /* Get stories. */
+        $stories = array();
+        if($browseType == 'unclosed')
+        {
+            $unclosedStatus = $this->lang->story->statusList;
+            unset($unclosedStatus['closed']);
+            $stories = $this->story->getProductStories($productID, 0, array_keys($unclosedStatus), $sort, $pager);
+        }
+        if($browseType == 'allstory')    $stories = $this->story->getProductStories($productID, 0, 'all', $sort, $pager);
+        if($browseType == 'bymodule')    $stories = $this->story->getProductStories($productID, $this->tree->getAllChildID($moduleID), 'all', $sort, $pager);
+        if($browseType == 'bysearch')    $stories = $this->story->getBySearch($productID, $queryID, $sort, $pager);
+        if($browseType == 'assignedtome')$stories = $this->story->getByAssignedTo($productID, $this->app->user->account, $sort, $pager);
+        if($browseType == 'openedbyme')  $stories = $this->story->getByOpenedBy($productID, $this->app->user->account, $sort, $pager);
+        if($browseType == 'reviewedbyme')$stories = $this->story->getByReviewedBy($productID, $this->app->user->account, $sort, $pager);
+        if($browseType == 'closedbyme')  $stories = $this->story->getByClosedBy($productID, $this->app->user->account, $sort, $pager);
+        if($browseType == 'draftstory')  $stories = $this->story->getByStatus($productID, 'draft', $sort, $pager);
+        if($browseType == 'activestory') $stories = $this->story->getByStatus($productID, 'active', $sort, $pager);
+        if($browseType == 'changedstory')$stories = $this->story->getByStatus($productID, 'changed', $sort, $pager);
+        if($browseType == 'willclose')   $stories = $this->story->getWillClose($productID, $sort, $pager);
+        if($browseType == 'closedstory') $stories = $this->story->getByStatus($productID, 'closed', $sort, $pager);
+
+        /* Process the sql, get the conditon partion, save it to session. */
+        $this->loadModel('common')->saveQueryCondition($this->dao->get(), 'story');
+
+        /* Build search form. */
+        $this->config->product->search['actionURL'] = $this->createLink('product', 'browse', "productID=$productID&browseType=bySearch&queryID=myQueryID");
+        $this->config->product->search['queryID']   = $queryID;
+        $this->config->product->search['params']['plan']['values'] = $this->loadModel('productplan')->getPairs($productID);
+        $this->config->product->search['params']['product']['values'] = array($productID => $this->products[$productID], 'all' => $this->lang->product->allProduct);
+        $this->config->product->search['params']['module']['values']  = $this->tree->getOptionMenu($productID, $viewType = 'story', $startModuleID = 0);
+        $this->loadModel('search')->setSearchParams($this->config->product->search);
+
+        $this->view->productID     = $productID;
+        $this->view->productName   = $this->products[$productID];
+        $this->view->moduleID      = $moduleID;
+        $this->view->stories       = $stories;
+        $this->view->plans         = $this->loadModel('productplan')->getPairs($productID);
+        $this->view->summary       = $this->product->summary($stories);
+        $this->view->moduleTree    = $this->tree->getTreeMenu($productID, $viewType = 'story', $startModuleID = 0, array('treeModel', 'createStoryLink'));
+        $this->view->parentModules = $this->tree->getParents($moduleID);
+        $this->view->pager         = $pager;
+        $this->view->users         = $this->user->getPairs('nodeleted|noletter|pofirst');
+        $this->view->orderBy       = $orderBy;
+        $this->view->browseType    = $browseType;
+        $this->view->moduleID      = $moduleID;
+        $this->display();
+    }
+
+    /**
+     * Create a product. 
+     * 
+     * @access public
+     * @return void
+     */
+    public function create()
+    {
+        if(!empty($_POST))
+        {
+            $productID = $this->product->create();
+            if(dao::isError()) die(js::error(dao::getError()));
+            $this->loadModel('action')->create('product', $productID, 'opened');
+            // die(js::locate($this->createLink($this->moduleName, 'browse', "productID=$productID"), 'parent'));
+            die(js::locate($this->createLink($this->moduleName, "index", "locate=no"), 'parent')); // changed
+        }
+
+        $this->product->setMenu($this->products, key($this->products));
+
+        $this->view->title      = $this->lang->product->create;
+        $this->view->position[] = $this->view->title;
+        $this->view->groups     = $this->loadModel('group')->getPairs();
+        $this->view->poUsers    = $this->loadModel('user')->getPairs('nodeleted|pofirst|noclosed');
+        $this->view->qdUsers    = $this->loadModel('user')->getPairs('nodeleted|qdfirst|noclosed');
+        $this->view->rdUsers    = $this->loadModel('user')->getPairs('nodeleted|devfirst|noclosed');
+        $this->display();
+    }
+
+    /**
+     * Edit a product.
+     * 
+     * @param  int    $productID 
+     * @access public
+     * @return void
+     */
+    public function edit($productID, $action = 'edit', $extra = '')
+    {
+        if(!empty($_POST))
+        {
+            $changes = $this->product->update($productID); 
+            if(dao::isError()) die(js::error(dao::getError()));
+            if($action == 'undelete')
+            {
+                $this->loadModel('action');
+                $this->dao->update(TABLE_PRODUCT)->set('deleted')->eq(0)->where('id')->eq($productID)->exec();
+                $this->dao->update(TABLE_ACTION)->set('extra')->eq(ACTIONMODEL::BE_UNDELETED)->where('id')->eq($extra)->exec();
+                $this->action->create('product', $productID, 'undeleted');
+            }
+            if($changes)
+            {
+                $actionID = $this->loadModel('action')->create('product', $productID, 'edited');
+                $this->action->logHistory($actionID, $changes);
+            }
+            die(js::locate($this->createLink($this->moduleName, "index", "locate=no"), 'parent'));
+        }
+
+        $this->product->setMenu($this->products, $productID);
+
+        $product = $this->dao->findById($productID)->from(TABLE_PRODUCT)->fetch();
+        $this->view->title      = $this->lang->product->edit . $this->lang->colon . $product->name;
+        $this->view->position[] = html::a($this->createLink($this->moduleName, 'browse'), $product->name);
+        $this->view->position[] = $this->lang->product->edit;
+        $this->view->product    = $product;
+        $this->view->groups     = $this->loadModel('group')->getPairs();
+        $this->view->poUsers    = $this->loadModel('user')->getPairs('nodeleted|pofirst',  $product->PO);
+        $this->view->qdUsers    = $this->loadModel('user')->getPairs('nodeleted|qdfirst',  $product->QD);
+        $this->view->rdUsers    = $this->loadModel('user')->getPairs('nodeleted|devfirst', $product->RD);
+        $this->view->createdBy  = $this->loadModel('user')->getUserNameByAccount($product->createdBy);
+        $this->display();
+    }
+
+    /**
+     * Batch edit products.
+     * 
+     * @param  int    $productID 
+     * @access public
+     * @return void
+     */
+    public function batchEdit($productID = 0)
+    {
+        if($this->post->names)
+        {
+            $allChanges = $this->product->batchUpdate();
+            if(!empty($allChanges))
+            {
+                foreach($allChanges as $productID => $changes)
+                {
+                    if(empty($changes)) continue;
+
+                    $actionID = $this->loadModel('action')->create('product', $productID, 'Edited');
+                    $this->action->logHistory($actionID, $changes);
+                }
+            }
+            die(js::locate($this->session->productList, 'parent'));
+        }
+
+        $this->product->setMenu($this->products, $productID);
+
+        $productIDList = $this->post->productIDList ? $this->post->productIDList : die(js::locate($this->session->productList, 'parent'));
+
+        $this->view->title         = $this->lang->product->batchEdit;
+        $this->view->position[]    = $this->lang->product->batchEdit;
+        $this->view->productIDList = $productIDList;
+        $this->view->products      = $this->dao->select('*')->from(TABLE_PRODUCT)->where('id')->in($productIDList)->fetchAll('id');
+        $this->view->poUsers       = $this->loadModel('user')->getPairs('nodeleted|pofirst');
+        $this->view->qdUsers       = $this->loadModel('user')->getPairs('nodeleted|qdfirst');
+        $this->view->rdUsers       = $this->loadModel('user')->getPairs('nodeleted|devfirst');
+        $this->display();
+    }
+
+    /**
+     * Close product.
+     * 
+     * @param  int    $productID 
+     * @access public
+     * @return void
+     */
+    public function close($productID)
+    {
+        $product = $this->product->getById($productID);
+        $actions = $this->loadModel('action')->getList('product', $productID);
+
+        if(!empty($_POST))
+        {
+            $changes = $this->product->close($productID);
+            if(dao::isError()) die(js::error(dao::getError()));
+
+            if($this->post->comment != '' or !empty($changes))
+            {
+                $actionID = $this->action->create('product', $productID, 'Closed', $this->post->comment);
+                $this->action->logHistory($actionID, $changes);
+            }
+            die(js::reload('parent.parent'));
+        }
+
+        $this->product->setMenu($this->products, $productID);
+
+        $this->view->product    = $product;
+        $this->view->title      = $this->view->product->name . $this->lang->colon .$this->lang->close;
+        $this->view->position[] = $this->lang->close;
+        $this->view->actions    = $actions;
+        $this->view->users      = $this->loadModel('user')->getPairs('noletter');
+        $this->display();
+    }
+
+    /**
+     * View a product.
+     * 
+     * @param  int    $productID 
+     * @access public
+     * @return void
+     */
+    public function view($productID)
+    {
+        $this->product->setMenu($this->products, $productID);
+
+        $product  = $this->product->getStatByID($productID);
+        $product->desc = $this->loadModel('file')->setImgSize($product->desc);
+        if(!$product) die(js::error($this->lang->notFound) . js::locate('back'));
+
+        $this->view->title      = $product->name . $this->lang->colon . $this->lang->product->view;
+        $this->view->position[] = html::a($this->createLink($this->moduleName, 'productplan'), $product->name);
+        $this->view->position[] = $this->lang->product->view;
+        $this->view->product    = $product;
+        $this->view->actions    = $this->loadModel('action')->getList('product', $productID);
+        $this->view->users      = $this->user->getPairs('noletter');
+        $this->view->groups     = $this->loadModel('group')->getPairs();
+
+        $this->display();
+    }
+
+    /**
+     * View projects of products.
+     * 
+     * @param  int    $projectID 
+     * @access public
+     * @return void
+     */
+    public function viewprojects($projectID)
+    {
+        // echo "$projectID";
+        $project = $this->loadModel('project')->getById($projectID, true); // changedbyheng
+        // echo "ok"."$project";
+        if(!$project)
+        {
+            // echo "ok";
+            die(js::error($this->lang->notFound) . js::locate('back'));
+        }
+
+        /* Set menu. */
+        // $this->loadModel('project')->setMenu($this->projects, $project->id);
+        $this->view->title      = $project->name.$this->lang->project->view;
+        // $this->view->position[] = html::a($this->createLink('project', 'browse', "projectID=$projectID"), $project->name);
+
+        // changedbyheng
+        $productsAllbyheng = $this->loadModel('project')->getProducts($project->id);
+        foreach($productsAllbyheng as $productID => $productName)
+        {
+
+            $this->view->position[] = html::a($this->createLink('product', 'project', "productID=$productID"), $productName);
+
+        }
+
+        // $this->view->position[] = $this->lang->project->view;
+
+        // changedbyheng
+        $this->view->projects  = $this->product->getProjectPairs($productID, $param = 'all'); // changedbyheng
+        $this->view->position[] = html::select('project', $this->view->projects, $project->id, "class='' onchange='byProject(this.value)'");
+
+        // $this->view->position[] = "";
+        // echo "$productID";
+        $this->view->project = $project;
+        
+        $this->view->products = $this->loadModel('project')->getProducts($project->id);
+        $this->view->groups   = $this->loadModel('group')->getPairs();
+        $this->view->actions  = $this->loadModel('action')->getList('project', $projectID);
+        $this->view->users    = $this->loadModel('user')->getPairs('noletter');
+
+        $this->display();
+    }
+
+
+
+    /**
+     * Delete a product.
+     * 
+     * @param  int    $productID 
+     * @param  string $confirm    yes|no
+     * @access public
+     * @return void
+     */
+    public function delete($productID, $confirm = 'no')
+    {
+        if($confirm == 'no')
+        {
+            die(js::confirm($this->lang->product->confirmDelete, $this->createLink('product', 'delete', "productID=$productID&confirm=yes")));
+        }
+        else
+        {
+            $this->product->delete(TABLE_PRODUCT, $productID);
+            $this->session->set('product', '');     // 清除session。
+            die(js::locate($this->createLink($this->moduleName, "index", "locate=no"), 'parent'));
+        }
+    }
+
+    /**
+     * Docs of a product.
+     * 
+     * @param  int    $productID 
+     * @access public
+     * @return void
+     */
+    public function doc($productID)
+    {
+        $this->product->setMenu($this->products, $productID);
+        $this->session->set('docList', $this->app->getURI(true));
+
+        $product = $this->dao->findById($productID)->from(TABLE_PRODUCT)->fetch();
+        $this->view->title      = $product->name . $this->lang->colon . $this->lang->product->doc;
+        $this->view->position[] = html::a($this->createLink($this->moduleName, 'browse'), $product->name);
+        $this->view->position[] = $this->lang->product->doc;
+        $this->view->product    = $product;
+        $this->view->docs       = $this->loadModel('doc')->getProductDocs($productID);
+        $this->view->users      = $this->loadModel('user')->getPairs('noletter');
+        $this->display();
+    }
+
+    /**
+     * Road map of a product. 
+     * 
+     * @param  int    $productID 
+     * @access public
+     * @return void
+     */
+    public function roadmap($productID)
+    {
+        $this->product->setMenu($this->products, $productID);
+
+        $this->session->set('releaseList',     $this->app->getURI(true));
+        $this->session->set('productPlanList', $this->app->getURI(true));
+
+        $product = $this->dao->findById($productID)->from(TABLE_PRODUCT)->fetch();
+        $this->view->title      = $product->name . $this->lang->colon . $this->lang->product->roadmap;
+        $this->view->position[] = html::a($this->createLink($this->moduleName, 'browse'), $product->name);
+        $this->view->position[] = $this->lang->product->roadmap;
+        $this->view->product    = $product;
+        $this->view->roadmaps   = $this->product->getRoadmap($productID);
+
+        $this->display();
+    }
+
+    /**
+     * Product dynamic.
+     * 
+     * @param  string $type 
+     * @param  string $orderBy 
+     * @param  int    $recTotal 
+     * @param  int    $recPerPage 
+     * @param  int    $pageID 
+     * @access public
+     * @return void
+     */
+    public function dynamic($productID = 0, $type = 'today', $param = '', $orderBy = 'date_desc', $recTotal = 0, $recPerPage = 20, $pageID = 1)
+    {
+        /* Save session. */
+        $uri   = $this->app->getURI(true);
+        $this->session->set('productList',     $uri);
+        $this->session->set('productPlanList', $uri);
+        $this->session->set('releaseList',     $uri);
+        $this->session->set('storyList',       $uri);
+        $this->session->set('projectList',     $uri);
+        $this->session->set('taskList',        $uri);
+        $this->session->set('buildList',       $uri);
+        $this->session->set('bugList',         $uri);
+        $this->session->set('caseList',        $uri);
+        $this->session->set('testtaskList',    $uri);
+
+        $this->product->setMenu($this->products, $productID);
+
+        /* Append id for secend sort. */
+        $sort = $this->loadModel('common')->appendOrder($orderBy);
+
+        /* Set the pager. */
+        $this->app->loadClass('pager', $static = true);
+        $pager = pager::init($recTotal, $recPerPage, $pageID);
+
+        /* Set the user and type. */
+        $account = $type == 'account' ? $param : 'all';
+        $period  = $type == 'account' ? 'all'  : $type;
+
+        /* The header and position. */
+        $this->view->title      = $this->products[$productID] . $this->lang->colon . $this->lang->product->dynamic;
+        $this->view->position[] = html::a($this->createLink($this->moduleName, 'browse'), $this->products[$productID]);
+        $this->view->position[] = $this->lang->product->dynamic;
+
+        /* Assign. */
+        $this->view->productID = $productID;
+        $this->view->type      = $type;
+        $this->view->users     = $this->loadModel('user')->getPairs('nodeleted|noletter');
+        $this->view->account   = $account;
+        $this->view->orderBy   = $orderBy;
+        $this->view->pager     = $pager;
+        $this->view->param     = $param;
+        $this->view->actions   = $this->loadModel('action')->getDynamic($account, $period, $sort, $pager, $productID);
+        $this->display();
+    }
+
+    /**
+     * AJAX: get projects of a product in html select.
+     * 
+     * @param  int    $productID 
+     * @param  int    $projectID 
+     * @access public
+     * @return void
+     */
+    public function ajaxGetProjects($productID, $projectID = 0)
+    {
+        $projects = $this->product->getProjectPairs($productID, $params = 'nodeleted');
+        die(html::select('project', $projects, $projectID, 'class=form-control onchange=loadProjectRelated(this.value)'));
+    }
+
+    /**
+     * AJAX: get plans of a product in html select. 
+     * 
+     * @param  int    $productID 
+     * @param  int    $planID 
+     * @param  bool   $needCreate
+     * @access public
+     * @return void
+     */
+    public function ajaxGetPlans($productID, $planID = 0, $needCreate = false)
+    {
+        $plans = $this->loadModel('productplan')->getPairs($productID);
+        $output = html::select('plan', $plans, $planID, "class='form-control chosen'");
+        if(count($plans) == 1 and $needCreate) 
+        {
+            $output .= "<span class='input-group-addon'>";
+            $output .= html::a($this->createLink('productplan', 'create', "productID=$productID"), $this->lang->productplan->create, '_blank');
+            $output .= '&nbsp; ';
+            $output .= html::a("javascript:loadProductPlans($productID)", $this->lang->refresh);
+            $output .= '</span>';
+        }
+        die($output);
+    }
+
+    /**
+     * Drop menu page.
+     * 
+     * @param  int    $productID 
+     * @param  string $module 
+     * @param  string $method 
+     * @param  string $extra 
+     * @access public
+     * @return void
+     */
+    public function ajaxGetDropMenu($productID, $module, $method, $extra)
+    {
+        $this->view->link      = $this->product->getProductLink($module, $method, $extra);
+        $this->view->productID = $productID;
+        $this->view->module    = $module;
+        $this->view->method    = $method;
+        $this->view->extra     = $extra;
+        $this->view->products  = $this->dao->select('*')->from(TABLE_PRODUCT)->where('id')->in(array_keys($this->products))->orderBy('`order` desc')->fetchAll();
+        $this->display();
+    }
+
+    /**
+     * The results page of search.
+     * 
+     * @param  string  $keywords 
+     * @param  string  $module 
+     * @param  string  $method 
+     * @param  mix     $extra 
+     * @access public
+     * @return void
+     */
+    public function ajaxGetMatchedItems($keywords, $module, $method, $extra)
+    {
+        $products = $this->dao->select('*')->from(TABLE_PRODUCT)->where('deleted')->eq(0)->andWhere('name')->like("%$keywords%")->orderBy('`order` desc')->fetchAll();
+        foreach($products as $key => $product)
+        {
+            if(!$this->product->checkPriv($product)) unset($products[$key]);
+        }
+
+        $this->view->link     = $this->product->getProductLink($module, $method, $extra);
+        $this->view->products = $products;
+        $this->view->keywords = $keywords;
+        $this->display();
+    }
+
+    /**
+     * Update order.
+     * 
+     * @access public
+     * @return void
+     */
+    public function updateOrder()
+    {
+        $idList   = explode(',', trim($this->post->products, ','));
+        $orderBy  = $this->post->orderBy;
+        if(strpos($orderBy, 'order') === false) return false;
+
+        $products = $this->dao->select('id,`order`')->from(TABLE_PRODUCT)->where('id')->in($idList)->orderBy($orderBy)->fetchPairs('order', 'id');
+        foreach($products as $order => $id)
+        {
+            $newID = array_shift($idList);
+            if($id == $newID) continue;
+            $this->dao->update(TABLE_PRODUCT)->set('`order`')->eq($order)->where('id')->eq($newID)->exec();
+        }
+    }
+
+
+}

@@ -1,0 +1,13 @@
+@CHARSET "UTF-8";
+.myimage{
+	width:120px;
+	height:120px;
+	border-radius:50%;
+}
+.myname{
+	color:white;
+	font-size:20px;
+}
+.name{
+	margin-left:30px;
+}

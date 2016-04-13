@@ -1,0 +1,30 @@
+@CHARSET "UTF-8";
+.myimage{
+	width:120px;
+	height:120px;	
+}
+.uploadImg{
+	margin-left:auto;
+	margin-right:auto;
+	text-align:center;
+}
+#file
+{
+	margin-left:315px;
+}
+#submit
+{
+	margin-left:650px;
+	margin-bottom:20px;
+	width:100px;
+}
+#cancel
+{
+	position:absolute;
+	margin-left:540px;
+	width:100px;
+}
+.img{
+	margin-top:10px;
+}
+

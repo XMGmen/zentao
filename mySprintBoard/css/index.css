@@ -1,0 +1,37 @@
+@CHARSET "UTF-8";
+.tablewidth
+{
+	width:400px;
+}
+#titlebar
+{
+	margin:0px;
+	width:400px;
+}
+th{
+	text-align:center;
+}
+#modal-overlay{
+	visibility:hidden;
+	position:absolute;
+	left:0px;
+	top:0px;
+	width:100%;
+	height:100%;
+	text-align:center;
+	z-index:1000;
+	backbround-color:#333;
+	opacity:0.5;
+}
+.modal-data{
+	width:300px;
+	margin:100px auto;
+	background-color:#fff;
+	border:1px solid #000;
+	padding:15px;
+	text-align:center;
+}
+
+
+
+

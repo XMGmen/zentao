@@ -1,0 +1,1 @@
+function byProject(projectID){    location.href = createLink('product', 'viewprojects', "project=" + projectID);}
